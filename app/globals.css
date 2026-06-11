@@ -83,6 +83,10 @@ body {
   cursor: pointer;
 }
 
+.menu-btn .arrow {
+  display: inline;
+}
+
 .menu-dropdown {
   position: absolute;
   top: 100%;
@@ -534,8 +538,29 @@ tr.highlight td {
 /* ---- Responsive ---- */
 @media (max-width: 500px) {
   .navbar {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 0.3rem;
+  }
+
+  .navbar-brand {
+    font-size: 0.85rem;
+    gap: 0.2rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .navbar-right {
+    gap: 0.3rem;
+    font-size: 0.8rem;
+  }
+
+  .menu-btn .arrow {
+    display: none;
+  }
+
+  .menu-dropdown {
+    min-width: 160px;
   }
 
   .teams-row {

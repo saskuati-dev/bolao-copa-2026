@@ -10,6 +10,9 @@ export const metadata: Metadata = {
     title: 'Bolão 2026',
     statusBarStyle: 'black-translucent',
   },
+  icons: {
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {

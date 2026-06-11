@@ -70,8 +70,7 @@ export default function PalpitesPage() {
 
       const { data: votesData } = await supabase
         .from('votes')
-        .select('*')
-        .order('created_at');
+        .select('*');
 
       setUsers(usersData || []);
       setMatches(matchesData || []);
@@ -94,24 +93,31 @@ export default function PalpitesPage() {
   }, [matches]);
 
   const filtered = useMemo(() => {
-    return votes.filter((v) => {
-      const user = usersById[v.user_id];
-      const match = matchesById[v.match_id];
-      if (!user || !match) return false;
+    return votes
+      .filter((v) => {
+        const user = usersById[v.user_id];
+        const match = matchesById[v.match_id];
+        if (!user || !match) return false;
 
-      if (filterUser && v.user_id !== filterUser) return false;
-      if (filterMatch && v.match_id !== filterMatch) return false;
-      if (filterTeam) {
-        const term = filterTeam.toLowerCase();
-        if (
-          !match.home_team.toLowerCase().includes(term) &&
-          !match.away_team.toLowerCase().includes(term)
-        )
-          return false;
-      }
+        if (filterUser && v.user_id !== filterUser) return false;
+        if (filterMatch && v.match_id !== filterMatch) return false;
+        if (filterTeam) {
+          const term = filterTeam.toLowerCase();
+          if (
+            !match.home_team.toLowerCase().includes(term) &&
+            !match.away_team.toLowerCase().includes(term)
+          )
+            return false;
+        }
 
-      return true;
-    });
+        return true;
+      })
+      .sort((a, b) => {
+        const ma = matchesById[a.match_id];
+        const mb = matchesById[b.match_id];
+        if (!ma || !mb) return 0;
+        return new Date(ma.match_datetime).getTime() - new Date(mb.match_datetime).getTime();
+      });
   }, [votes, usersById, matchesById, filterUser, filterMatch, filterTeam]);
 
   if (!authed || loading) {

@@ -76,7 +76,7 @@ export function Navbar() {
             className="btn btn-ghost btn-sm menu-btn"
             onClick={() => setMenuOpen(!menuOpen)}
           >
-            {userName} ▾
+            {userName} <span className="arrow">▾</span>
           </button>
 
           {menuOpen && (
