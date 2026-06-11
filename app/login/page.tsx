@@ -199,18 +199,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {!isSignup && (
-            <div style={{ textAlign: 'right', marginBottom: '0.8rem' }}>
-              <Link
-                href="#"
-                style={{ fontSize: '0.8rem', color: 'var(--primary)' }}
-                onClick={(e) => { e.preventDefault(); setShowReset(true); setError(''); }}
-              >
-                Esqueceu a senha?
-              </Link>
-            </div>
-          )}
-
           <button
             type="submit"
             className="btn btn-primary"
@@ -238,6 +226,14 @@ export default function LoginPage() {
               Não tem conta?{' '}
               <Link href="#" onClick={(e) => { e.preventDefault(); setIsSignup(true); setError(''); }}>
                 Cadastre-se
+              </Link>
+              <br />
+              <Link
+                href="#"
+                style={{ fontSize: '0.8rem', color: 'var(--primary)' }}
+                onClick={(e) => { e.preventDefault(); setShowReset(true); setError(''); }}
+              >
+                Esqueceu a senha?
               </Link>
             </>
           )}
