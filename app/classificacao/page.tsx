@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
@@ -53,110 +53,123 @@ export default function ClassificacaoPage() {
     });
   }, [router]);
 
-  useEffect(() => {
-    async function load() {
-      if (!authed) return;
+  const load = useCallback(async () => {
+    if (!authed) return;
 
-      const { data: usersData } = await supabase
-        .from('users')
-        .select('*')
-        .order('name');
+    const { data: usersData } = await supabase
+      .from('users')
+      .select('*')
+      .order('name');
 
-      const { data: finished } = await supabase
-        .from('matches')
-        .select('id, home_score, away_score')
-        .eq('status', 'FINISHED');
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const { data: finished } = await supabase
+      .from('matches')
+      .select('id, home_score, away_score')
+      .or(
+        `status.eq.FINISHED,` +
+        `and(status.in.(LIVE,IN_PLAY,TIMED),match_datetime.lt.${twoHoursAgo},home_score.not.is.null)`,
+      );
 
-      const fMatches: Match[] = finished || [];
-      const finishedIds = new Set(fMatches.map((m) => m.id));
-      setHasFinished(fMatches.length > 0);
+    const fMatches: Match[] = finished || [];
+    const finishedIds = new Set(fMatches.map((m) => m.id));
+    setHasFinished(fMatches.length > 0);
 
-      const { data: allVotes } = await supabase
-        .from('votes')
-        .select('*')
-        .order('created_at');
+    const { data: allVotes } = await supabase
+      .from('votes')
+      .select('*')
+      .order('created_at');
 
-      const votesData: Vote[] = allVotes || [];
+    const votesData: Vote[] = allVotes || [];
 
-      // Verifica campeão
-      let championWinner: string | null = null;
-      const { data: final } = await supabase
-        .from('matches')
-        .select('home_team, away_team, home_score, away_score')
-        .eq('stage', 'FINAL')
-        .eq('status', 'FINISHED')
-        .maybeSingle();
+    // Verifica campeão
+    let championWinner: string | null = null;
+    const { data: final } = await supabase
+      .from('matches')
+      .select('home_team, away_team, home_score, away_score')
+      .eq('stage', 'FINAL')
+      .eq('status', 'FINISHED')
+      .maybeSingle();
 
-      if (final && final.home_score != null) {
-        championWinner =
-          final.home_score > final.away_score
-            ? final.home_team
-            : final.away_team;
-      }
-
-      let championBets: Record<string, string> = {};
-      if (championWinner) {
-        const { data: bets } = await supabase.from('champion_bets').select('*');
-        (bets || []).forEach((b: any) => {
-          championBets[b.user_id] = b.team_name;
-        });
-      }
-
-      const entries: RankingEntry[] = (usersData || []).map((u: User) => {
-        const userVotes = votesData.filter((v) => v.user_id === u.id);
-        const userFinishedVotes = userVotes.filter((v) =>
-          finishedIds.has(v.match_id),
-        );
-
-        let total = 0;
-        let exact = 0;
-        let correct = 0;
-
-        userFinishedVotes.forEach((v) => {
-          const match = fMatches.find((m) => m.id === v.match_id);
-          if (
-            !match ||
-            match.home_score == null ||
-            match.away_score == null
-          )
-            return;
-          const pts = calculatePoints(
-            v.home_score,
-            v.away_score,
-            match.home_score,
-            match.away_score,
-          );
-          total += pts;
-          if (pts === 5) exact++;
-          else if (pts === 3) correct++;
-        });
-
-        if (championBets[u.id] && championBets[u.id] === championWinner) {
-          total += 10;
-        }
-
-        return {
-          user: u,
-          total,
-          exact,
-          correct,
-          votes: userVotes.length,
-        };
-      });
-
-      entries.sort((a, b) => b.total - a.total || b.exact - a.exact);
-      setRanking(entries);
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setCurrentUserId(session?.user?.id);
-
-      setLoading(false);
+    if (final && final.home_score != null) {
+      championWinner =
+        final.home_score > final.away_score
+          ? final.home_team
+          : final.away_team;
     }
 
-    load();
+    let championBets: Record<string, string> = {};
+    if (championWinner) {
+      const { data: bets } = await supabase.from('champion_bets').select('*');
+      (bets || []).forEach((b: any) => {
+        championBets[b.user_id] = b.team_name;
+      });
+    }
+
+    const entries: RankingEntry[] = (usersData || []).map((u: User) => {
+      const userVotes = votesData.filter((v) => v.user_id === u.id);
+      const userFinishedVotes = userVotes.filter((v) =>
+        finishedIds.has(v.match_id),
+      );
+
+      let total = 0;
+      let exact = 0;
+      let correct = 0;
+
+      userFinishedVotes.forEach((v) => {
+        const match = fMatches.find((m) => m.id === v.match_id);
+        if (
+          !match ||
+          match.home_score == null ||
+          match.away_score == null
+        )
+          return;
+        const pts = calculatePoints(
+          v.home_score,
+          v.away_score,
+          match.home_score,
+          match.away_score,
+        );
+        total += pts;
+        if (pts === 5) exact++;
+        else if (pts === 3) correct++;
+      });
+
+      if (championBets[u.id] && championBets[u.id] === championWinner) {
+        total += 10;
+      }
+
+      return {
+        user: u,
+        total,
+        exact,
+        correct,
+        votes: userVotes.length,
+      };
+    });
+
+    entries.sort((a, b) => b.total - a.total || b.exact - a.exact);
+    setRanking(entries);
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    setCurrentUserId(session?.user?.id);
+
+    setLoading(false);
   }, [authed]);
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel('classificacao-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'matches' },
+        () => load(),
+      )
+      .subscribe();
+    return () => { channel.unsubscribe(); };
+  }, [load]);
 
   if (!authed || loading) {
     return (

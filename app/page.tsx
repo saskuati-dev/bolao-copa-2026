@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
@@ -48,7 +48,7 @@ export default function HomePage() {
     });
   }, [router]);
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const { data: m } = await supabase
       .from('matches')
       .select('*')
@@ -71,7 +71,10 @@ export default function HomePage() {
     }
 
     setLoading(false);
-  }
+  }, [userId]);
+
+  const loadDataRef = useRef(loadData);
+  loadDataRef.current = loadData;
 
   useEffect(() => {
     if (!authed) return;
@@ -91,6 +94,16 @@ export default function HomePage() {
     };
   }, [loadData, authed]);
 
+  const liveMatches = useMemo(() => {
+    const now = new Date();
+    return matches.filter((m) =>
+      m.status === 'LIVE' ||
+      m.status === 'IN_PLAY' ||
+      (new Date(m.match_datetime) <= now &&
+        !['FINISHED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'AWARDED'].includes(m.status)),
+    );
+  }, [matches]);
+
   const upcoming = useMemo(() => {
     const term = teamFilter.toLowerCase();
     return matches.filter(
@@ -105,10 +118,36 @@ export default function HomePage() {
           m.away_team.toLowerCase().includes(term)),
     );
   }, [matches, myVotes, teamFilter]);
-  const finished = matches
-    .filter((m) => m.status === 'FINISHED')
-    .slice(-10)
-    .reverse();
+
+  const finished = useMemo(() =>
+    matches
+      .filter((m) => m.status === 'FINISHED')
+      .slice(-10)
+      .reverse(),
+    [matches],
+  );
+
+  // Polling: recarrega dados do Supabase a cada 30s
+  useEffect(() => {
+    if (!authed) return;
+    const id = setInterval(() => loadDataRef.current(), 30_000);
+    return () => clearInterval(id);
+  }, [authed]);
+
+  // Polling: sincroniza com football-data.org a cada 3 min (só se tiver jogo ativo)
+  useEffect(() => {
+    if (!authed) return;
+    const now = new Date();
+    const twoHours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const hasActive = matches.some((m) =>
+      ['LIVE', 'IN_PLAY'].includes(m.status) ||
+      (new Date(m.match_datetime) <= twoHours &&
+        !['FINISHED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'AWARDED'].includes(m.status)),
+    );
+    if (!hasActive) return;
+    const id = setInterval(() => { fetch('/api/matches'); }, 3 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [matches, authed]);
 
   const PER_PAGE = 10;
   const totalPages = Math.ceil(upcoming.length / PER_PAGE);
@@ -131,7 +170,24 @@ export default function HomePage() {
     <div className="layout">
       <Navbar />
 
-      <h2 className="section-title" style={{ marginTop: 0 }}>
+      {liveMatches.length > 0 && (
+        <>
+          <h2 className="section-title" style={{ marginTop: 0, marginBottom: '0.8rem' }}>
+              Ao Vivo
+            </h2>
+          {liveMatches.map((m) => (
+            <MatchCard
+              key={m.id}
+              match={m}
+              existingVote={myVotes[m.id]}
+              userId={userId}
+              onVoteChange={loadData}
+            />
+          ))}
+        </>
+      )}
+
+      <h2 className="section-title" style={{ marginTop: liveMatches.length > 0 ? '1.5rem' : 0 }}>
         Próximos Jogos
       </h2>
 

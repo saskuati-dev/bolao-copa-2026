@@ -45,6 +45,10 @@ export default function PerfilPage() {
   } | null>(null);
   const [championBet, setChampionBet] = useState("");
   const [championWinner, setChampionWinner] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -150,6 +154,38 @@ export default function PerfilPage() {
     setLoading(false);
   }
 
+  async function handleSaveName() {
+    const name = editName.trim();
+    if (!name) return;
+    setSaving(true);
+    setSaveMsg("");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSaving(false); return; }
+
+    const { error: authError } = await supabase.auth.updateUser({
+      data: { name },
+    });
+    if (authError) { setSaveMsg("Erro: " + authError.message); setSaving(false); return; }
+
+    const { error: dbError } = await supabase
+      .from("users")
+      .update({ name })
+      .eq("id", user.id);
+    if (dbError) { setSaveMsg("Erro: " + dbError.message); setSaving(false); return; }
+
+    setName(name);
+    setEditing(false);
+    setSaving(false);
+    setSaveMsg("");
+  }
+
+  function startEditing() {
+    setEditName(name);
+    setEditing(true);
+    setSaveMsg("");
+  }
+
   if (!authed || loading) {
     return (
       <div className="layout">
@@ -168,8 +204,46 @@ export default function PerfilPage() {
       </h2>
 
       <div style={{ marginBottom: "1.5rem" }}>
-        <p style={{ fontSize: "1.1rem", fontWeight: 700 }}>{name}</p>
-        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>
+        {editing ? (
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              style={{
+                padding: "0.4rem 0.6rem",
+                fontSize: "1.1rem",
+                fontWeight: 700,
+                background: "var(--surface)",
+                color: "var(--text)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                fontFamily: "var(--font)",
+                flex: "1 1 200px",
+              }}
+              autoFocus
+            />
+            <button className="btn btn-primary btn-sm" onClick={handleSaveName} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
+            </button>
+            <button className="btn btn-ghost btn-sm" onClick={() => setEditing(false)}>
+              Cancelar
+            </button>
+            {saveMsg && <span style={{ color: "var(--red)", fontSize: "0.85rem" }}>{saveMsg}</span>}
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+            <p style={{ fontSize: "1.1rem", fontWeight: 700, margin: 0 }}>{name}</p>
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={startEditing}
+              style={{ fontSize: "0.75rem", padding: "0.2rem 0.5rem" }}
+            >
+              ✏️
+            </button>
+          </div>
+        )}
+        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "0.3rem" }}>
           {email}
         </p>
       </div>

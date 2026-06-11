@@ -48,21 +48,24 @@ for (const m of data.matches) {
     continue;
   }
   try {
+    const record = {
+      api_match_id: m.id,
+      home_team: m.homeTeam.name,
+      away_team: m.awayTeam.name,
+      home_flag: m.homeTeam.crest || null,
+      away_flag: m.awayTeam.crest || null,
+      match_datetime: m.utcDate,
+      stage: m.stage,
+      group_name: m.group ? m.group.replace('GROUP_', '') : null,
+      status: m.status,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (m.score?.fullTime?.home != null) record.home_score = m.score.fullTime.home;
+    if (m.score?.fullTime?.away != null) record.away_score = m.score.fullTime.away;
+
     const { error } = await sb.from('matches').upsert(
-      {
-        api_match_id: m.id,
-        home_team: m.homeTeam.name,
-        away_team: m.awayTeam.name,
-        home_flag: m.homeTeam.crest || null,
-        away_flag: m.awayTeam.crest || null,
-        match_datetime: m.utcDate,
-        stage: m.stage,
-        group_name: m.group ? m.group.replace('GROUP_', '') : null,
-        home_score: m.score?.fullTime?.home ?? null,
-        away_score: m.score?.fullTime?.away ?? null,
-        status: m.status,
-        updated_at: new Date().toISOString(),
-      },
+      record,
       { onConflict: 'api_match_id' },
     );
 

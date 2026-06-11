@@ -54,10 +54,14 @@ export default function ResultadosPage() {
   useEffect(() => {
     async function load() {
       if (!authed) return;
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
       const { data: m } = await supabase
         .from('matches')
         .select('*')
-        .eq('status', 'FINISHED')
+        .or(
+          `status.eq.FINISHED,` +
+          `and(status.in.(LIVE,IN_PLAY,TIMED),match_datetime.lt.${twoHoursAgo},home_score.not.is.null)`,
+        )
         .order('match_datetime', { ascending: false });
       setMatches(m || []);
 
@@ -155,18 +159,18 @@ export default function ResultadosPage() {
                           .sort((a, b) => {
                             const pa = calculatePoints(
                               a.home_score, a.away_score,
-                              m.home_score!, m.away_score!,
+                              m.home_score ?? 0, m.away_score ?? 0,
                             );
                             const pb = calculatePoints(
                               b.home_score, b.away_score,
-                              m.home_score!, m.away_score!,
+                              m.home_score ?? 0, m.away_score ?? 0,
                             );
                             return pb - pa;
                           })
                           .map((v) => {
                             const pts = calculatePoints(
                               v.home_score, v.away_score,
-                              m.home_score!, m.away_score!,
+                              m.home_score ?? 0, m.away_score ?? 0,
                             );
                             const cls =
                               pts === 5 ? 'pts-exact' : pts === 3 ? 'pts-good' : 'pts-miss';
