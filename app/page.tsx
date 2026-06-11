@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
@@ -73,9 +73,6 @@ export default function HomePage() {
     setLoading(false);
   }, [userId]);
 
-  const loadDataRef = useRef(loadData);
-  loadDataRef.current = loadData;
-
   useEffect(() => {
     if (!authed) return;
     loadData();
@@ -126,28 +123,6 @@ export default function HomePage() {
       .reverse(),
     [matches],
   );
-
-  // Polling: recarrega dados do Supabase a cada 30s
-  useEffect(() => {
-    if (!authed) return;
-    const id = setInterval(() => loadDataRef.current(), 30_000);
-    return () => clearInterval(id);
-  }, [authed]);
-
-  // Polling: sincroniza com football-data.org a cada 3 min (só se tiver jogo ativo)
-  useEffect(() => {
-    if (!authed) return;
-    const now = new Date();
-    const twoHours = new Date(now.getTime() + 2 * 60 * 60 * 1000);
-    const hasActive = matches.some((m) =>
-      ['LIVE', 'IN_PLAY'].includes(m.status) ||
-      (new Date(m.match_datetime) <= twoHours &&
-        !['FINISHED', 'CANCELLED', 'POSTPONED', 'SUSPENDED', 'AWARDED'].includes(m.status)),
-    );
-    if (!hasActive) return;
-    const id = setInterval(() => { fetch('/api/matches'); }, 3 * 60 * 1000);
-    return () => clearInterval(id);
-  }, [matches, authed]);
 
   const PER_PAGE = 10;
   const totalPages = Math.ceil(upcoming.length / PER_PAGE);

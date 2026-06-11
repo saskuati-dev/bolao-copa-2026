@@ -130,7 +130,7 @@ export default function ClassificacaoPage() {
           match.away_score,
         );
         total += pts;
-        if (pts === 5) exact++;
+        if (pts === 5) { exact++; correct++; }
         else if (pts === 3) correct++;
       });
 
