@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
@@ -158,6 +158,8 @@ export default function ClassificacaoPage() {
     setLoading(false);
   }, [authed]);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     load();
     const channel = supabase
@@ -165,10 +167,16 @@ export default function ClassificacaoPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'matches' },
-        () => load(),
+        () => {
+          if (debounceRef.current) clearTimeout(debounceRef.current);
+          debounceRef.current = setTimeout(() => load(), 2000);
+        },
       )
       .subscribe();
-    return () => { channel.unsubscribe(); };
+    return () => {
+      channel.unsubscribe();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, [load]);
 
   if (!authed || loading) {

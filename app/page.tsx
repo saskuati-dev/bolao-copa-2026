@@ -77,17 +77,48 @@ export default function HomePage() {
     if (!authed) return;
     loadData();
 
-    const channel = supabase
+    const matchesChannel = supabase
       .channel('matches-realtime')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'matches' },
-        () => loadData(),
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            setMatches((prev) => prev.filter((m) => m.id !== payload.old.id));
+          } else if (payload.new) {
+            setMatches((prev) =>
+              prev.map((m) => (m.id === payload.new.id ? { ...m, ...(payload.new as Match) } : m)),
+            );
+          }
+        },
+      )
+      .subscribe();
+
+    const votesChannel = supabase
+      .channel('votes-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'votes' },
+        (payload) => {
+          if (payload.eventType === 'DELETE' && payload.old) {
+            setMyVotes((prev) => {
+              const next = { ...prev };
+              delete next[payload.old.match_id];
+              return next;
+            });
+          } else if (payload.new) {
+            const row = payload.new as Record<string, unknown>;
+            if (row.user_id) {
+              setMyVotes((prev) => ({ ...prev, [row.match_id as string]: payload.new as Vote }));
+            }
+          }
+        },
       )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
+      matchesChannel.unsubscribe();
+      votesChannel.unsubscribe();
     };
   }, [loadData, authed]);
 

@@ -17,6 +17,25 @@ if (!API_KEY || !SUPABASE_URL || !SUPABASE_KEY) {
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// Só faz fetch se tiver jogo em andamento ou começando nas próximas 2h
+const now = new Date();
+const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+const twoHoursAhead = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
+
+const { data: active } = await sb
+  .from('matches')
+  .select('id')
+  .or(
+    `status.in.(LIVE,IN_PLAY),` +
+    `and(match_datetime.gt.${twoHoursAgo},match_datetime.lt.${twoHoursAhead},status.not.in.(FINISHED,CANCELLED,POSTPONED,SUSPENDED,AWARDED))`,
+  )
+  .limit(1);
+
+if (!active || active.length === 0) {
+  console.log('Nenhum jogo ativo ou próximo. Pulando sync.');
+  process.exit(0);
+}
+
 console.log('Buscando jogos da Copa do Mundo 2026...');
 
 const res = await fetch('https://api.football-data.org/v4/competitions/WC/matches', {
