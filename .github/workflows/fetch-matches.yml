@@ -2,7 +2,7 @@ name: Buscar Jogos da Copa
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "22"
       - run: npm install @supabase/supabase-js
       - name: Sincronizar jogos
         run: node scripts/fetch-matches.mjs
