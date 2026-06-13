@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
-import { calculatePoints, formatStage } from '@/lib/points';
+import { calculatePoints, calculatePenaltyBonus, formatStage, canHavePenalties, hadPenalties } from '@/lib/points';
 import { translateTeam } from '@/lib/teams';
 
 interface Match {
@@ -17,6 +17,8 @@ interface Match {
   home_score: number | null;
   away_score: number | null;
   status: string;
+  penalty_home_score?: number | null;
+  penalty_away_score?: number | null;
 }
 
 interface Vote {
@@ -24,6 +26,7 @@ interface Vote {
   match_id: string;
   home_score: number;
   away_score: number;
+  predicted_penalties?: boolean | null;
 }
 
 interface User {
@@ -66,7 +69,7 @@ export default function PalpitesPage() {
 
       const { data: matchesData } = await supabase
         .from('matches')
-        .select('id, home_team, away_team, match_datetime, stage, group_name, home_score, away_score, status')
+        .select('id, home_team, away_team, match_datetime, stage, group_name, home_score, away_score, status, penalty_home_score, penalty_away_score')
         .order('match_datetime', { ascending: true });
 
       const { data: votesData } = await supabase
@@ -224,6 +227,7 @@ export default function PalpitesPage() {
                 <th>Jogo</th>
                 <th>Data</th>
                 <th>Palpite</th>
+                <th>Pênaltis</th>
                 <th>Placar</th>
                 <th>Pts</th>
               </tr>
@@ -249,6 +253,11 @@ export default function PalpitesPage() {
                         match.away_score,
                       )
                     : null;
+                const hasPens = hadPenalties(match);
+                const penaltyPts = finished && canHavePenalties(match.stage)
+                  ? calculatePenaltyBonus(v.predicted_penalties ?? null, hasPens)
+                  : 0;
+                const totalPts = (pts ?? 0) + penaltyPts;
                 const cls =
                   pts === 5 ? 'pts-exact' : pts === 3 ? 'pts-good' : pts != null ? 'pts-miss' : '';
 
@@ -264,12 +273,18 @@ export default function PalpitesPage() {
                     <td>
                       <strong>{v.home_score} x {v.away_score}</strong>
                     </td>
+                    <td style={{ fontSize: '0.8rem' }}>
+                      {canHavePenalties(match.stage)
+                        ? (v.predicted_penalties ? 'Sim' : 'Não')
+                        : '-'}
+                      {penaltyPts > 0 && <span style={{ color: 'var(--green)', marginLeft: '0.2rem' }}>+1</span>}
+                    </td>
                     <td>
                       {finished
                         ? `${match.home_score} x ${match.away_score}`
                         : '-'}
                     </td>
-                    <td className={cls}>{pts ?? '-'}</td>
+                    <td className={cls}>{totalPts > 0 ? totalPts : (pts ?? '-')}</td>
                   </tr>
                 );
               })}

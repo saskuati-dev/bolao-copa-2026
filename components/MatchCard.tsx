@@ -7,6 +7,9 @@ import {
   formatStage,
   canVote,
   formatCountdown,
+  canHavePenalties,
+  hadPenalties,
+  calculatePenaltyBonus,
 } from '@/lib/points';
 import { Toast } from '@/components/Toast';
 import { translateTeam } from '@/lib/teams';
@@ -25,11 +28,14 @@ interface Match {
   away_score: number | null;
   status: string;
   time_elapsed?: string | null;
+  penalty_home_score?: number | null;
+  penalty_away_score?: number | null;
 }
 
 interface Vote {
   home_score: number;
   away_score: number;
+  predicted_penalties?: boolean | null;
 }
 
 interface Props {
@@ -46,6 +52,10 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [predictedPenalties, setPredictedPenalties] = useState(existingVote?.predicted_penalties ?? null);
+
+  const knockoutMatch = canHavePenalties(match.stage);
+  const hasPens = hadPenalties(match);
 
   const isFinished = match.status === 'FINISHED';
   const isLive = match.status === 'LIVE' || match.status === 'IN_PLAY';
@@ -98,7 +108,7 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
     }
 
     const { error: sbError } = await supabase.from('votes').upsert(
-      { user_id: userId, match_id: match.id, home_score: h, away_score: a },
+      { user_id: userId, match_id: match.id, home_score: h, away_score: a, predicted_penalties: knockoutMatch ? predictedPenalties : null },
       { onConflict: 'user_id,match_id' },
     );
 
@@ -126,6 +136,10 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
               match.away_score!,
             )
           : null;
+      const penaltyPts = knockoutMatch
+        ? calculatePenaltyBonus(existingVote.predicted_penalties ?? null, hasPens)
+        : 0;
+      const totalPts = (pts ?? 0) + penaltyPts;
       const cls = pts === 5 ? 'pts-exact' : pts === 3 ? 'pts-good' : 'pts-miss';
       return (
         <div className="vote-section">
@@ -133,6 +147,15 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
             Seu palpite: {existingVote.home_score} x {existingVote.away_score}
             {pts != null && ` (${pts} pts)`}
           </span>
+          {knockoutMatch && (
+            <div style={{ marginTop: '0.3rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {existingVote.predicted_penalties
+                ? 'Previu pênaltis: Sim'
+                : 'Previu pênaltis: Não'}
+              {penaltyPts > 0 && <span style={{ color: 'var(--green)', marginLeft: '0.3rem' }}>+{penaltyPts}pt</span>}
+              {totalPts > 0 && <span style={{ marginLeft: '0.5rem', fontWeight: 600, color: 'var(--primary)' }}>Total: {totalPts} pts</span>}
+            </div>
+          )}
         </div>
       );
     }
@@ -173,11 +196,17 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
         <div className="vote-section">
           <div className="existing-vote">
             Seu palpite: <strong>{existingVote.home_score} x {existingVote.away_score}</strong>
+            {knockoutMatch && (
+              <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                {existingVote.predicted_penalties ? '☑ Pênaltis: Sim' : '☐ Pênaltis: Não'}
+              </span>
+            )}
             <button
               className="btn btn-ghost btn-sm"
               onClick={() => {
                 setHomeVal(existingVote.home_score.toString());
                 setAwayVal(existingVote.away_score.toString());
+                setPredictedPenalties(existingVote.predicted_penalties ?? null);
                 setEditing(true);
               }}
             >
@@ -228,6 +257,16 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
               </button>
             )}
           </div>
+          {knockoutMatch && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginTop: '0.5rem', fontSize: '0.85rem', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={predictedPenalties ?? false}
+                onChange={(e) => setPredictedPenalties(e.target.checked)}
+              />
+              Vai para pênaltis? (+1 pt se acertar)
+            </label>
+          )}
           {error && <div style={{ color: 'var(--red)', fontSize: '0.8rem', marginTop: '0.3rem' }}>{error}</div>}
         </form>
       </div>
@@ -261,6 +300,11 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
         {isFinished || isLive ? (
           <span className="score">
             {match.home_score ?? '-'} x {match.away_score ?? '-'}
+            {isFinished && hasPens && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                ({match.penalty_home_score} x {match.penalty_away_score} pen)
+              </span>
+            )}
           </span>
         ) : (
           <span className="vs">vs</span>

@@ -19,6 +19,8 @@ interface Match {
   home_score: number | null;
   away_score: number | null;
   status: string;
+  penalty_home_score?: number | null;
+  penalty_away_score?: number | null;
 }
 
 interface Vote {
@@ -26,6 +28,7 @@ interface Vote {
   match_id: string;
   home_score: number;
   away_score: number;
+  predicted_penalties?: boolean | null;
 }
 
 export default function MeusPalpitesPage() {

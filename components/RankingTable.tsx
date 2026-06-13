@@ -15,6 +15,7 @@ interface RankingEntry {
   exact: number;
   correct: number;
   votes: number;
+  penaltyBonus?: number;
 }
 
 interface Props {
@@ -37,6 +38,7 @@ export function RankingTable({ ranking, currentUserId }: Props) {
             <th>Pontos</th>
             <th>Placar exato</th>
             <th>Resultado</th>
+            <th>+Pênaltis</th>
             <th>Palpites</th>
           </tr>
         </thead>
@@ -56,6 +58,7 @@ export function RankingTable({ ranking, currentUserId }: Props) {
                 </td>
                 <td>{r.exact}</td>
                 <td>{r.correct}</td>
+                <td>{r.penaltyBonus ?? 0}</td>
                 <td>{r.votes}</td>
               </tr>
             );

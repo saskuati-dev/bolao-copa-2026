@@ -1,3 +1,27 @@
+const KNOCKOUT_STAGES = new Set([
+  'LAST_32', 'ROUND_OF_16', 'QUARTER_FINALS',
+  'SEMI_FINALS', 'THIRD_PLACE', 'FINAL',
+]);
+
+export function canHavePenalties(stage: string): boolean {
+  return KNOCKOUT_STAGES.has(stage);
+}
+
+export function hadPenalties(match: {
+  penalty_home_score?: number | null;
+  penalty_away_score?: number | null;
+}): boolean {
+  return match.penalty_home_score != null && match.penalty_away_score != null;
+}
+
+export function calculatePenaltyBonus(
+  predictedPenalties: boolean | null,
+  actualHadPenalties: boolean,
+): number {
+  if (predictedPenalties == null) return 0;
+  return predictedPenalties === actualHadPenalties ? 1 : 0;
+}
+
 export function calculatePoints(
   voteHome: number,
   voteAway: number,

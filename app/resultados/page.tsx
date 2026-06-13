@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
-import { calculatePoints, formatStage } from '@/lib/points';
+import { calculatePoints, calculatePenaltyBonus, formatStage, canHavePenalties, hadPenalties } from '@/lib/points';
 import { translateTeam } from '@/lib/teams';
 
 interface Match {
@@ -19,6 +19,8 @@ interface Match {
   home_score: number | null;
   away_score: number | null;
   status: string;
+  penalty_home_score?: number | null;
+  penalty_away_score?: number | null;
 }
 
 interface Vote {
@@ -26,6 +28,7 @@ interface Vote {
   match_id: string;
   home_score: number;
   away_score: number;
+  predicted_penalties?: boolean | null;
 }
 
 interface User {
@@ -132,6 +135,11 @@ export default function ResultadosPage() {
                 </div>
                 <span className="score">
                   {m.home_score ?? '-'} x {m.away_score ?? '-'}
+                  {hadPenalties(m) && (
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>
+                      ({m.penalty_home_score} x {m.penalty_away_score} pen)
+                    </span>
+                  )}
                 </span>
                 <div className="team away">
                   <span>{translateTeam(m.away_team)}</span>
@@ -146,49 +154,67 @@ export default function ResultadosPage() {
                   <span className="closed-text">Nenhum palpite registrado.</span>
                 ) : (
                   <div className="table-wrapper">
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Usuário</th>
-                          <th>Palpite</th>
-                          <th>Pontos</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {matchVotes
-                          .sort((a, b) => {
-                            const pa = calculatePoints(
-                              a.home_score, a.away_score,
-                              m.home_score ?? 0, m.away_score ?? 0,
-                            );
-                            const pb = calculatePoints(
-                              b.home_score, b.away_score,
-                              m.home_score ?? 0, m.away_score ?? 0,
-                            );
-                            return pb - pa;
-                          })
-                          .map((v) => {
-                            const pts = calculatePoints(
-                              v.home_score, v.away_score,
-                              m.home_score ?? 0, m.away_score ?? 0,
-                            );
-                            const cls =
-                              pts === 5 ? 'pts-exact' : pts === 3 ? 'pts-good' : 'pts-miss';
-                            const name = users[v.user_id]?.name || 'Desconhecido';
-                            return (
-                              <tr key={v.user_id + v.match_id}>
-                                <td>{name}</td>
-                                <td>
-                                  <strong>
-                                    {v.home_score} x {v.away_score}
-                                  </strong>
-                                </td>
-                                <td className={cls}>{pts}</td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Usuário</th>
+                            <th>Palpite</th>
+                            <th>Pênaltis</th>
+                            <th>Pontos</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {matchVotes
+                            .sort((a, b) => {
+                              const pa = calculatePoints(
+                                a.home_score, a.away_score,
+                                m.home_score ?? 0, m.away_score ?? 0,
+                              ) + calculatePenaltyBonus(
+                                a.predicted_penalties ?? null,
+                                hadPenalties(m),
+                              );
+                              const pb = calculatePoints(
+                                b.home_score, b.away_score,
+                                m.home_score ?? 0, m.away_score ?? 0,
+                              ) + calculatePenaltyBonus(
+                                b.predicted_penalties ?? null,
+                                hadPenalties(m),
+                              );
+                              return pb - pa;
+                            })
+                            .map((v) => {
+                              const pts = calculatePoints(
+                                v.home_score, v.away_score,
+                                m.home_score ?? 0, m.away_score ?? 0,
+                              );
+                              const penaltyPts = canHavePenalties(m.stage)
+                                ? calculatePenaltyBonus(v.predicted_penalties ?? null, hadPenalties(m))
+                                : 0;
+                              const totalPts = pts + penaltyPts;
+                              const cls = pts === 5 ? 'pts-exact' : pts === 3 ? 'pts-good' : 'pts-miss';
+                              const name = users[v.user_id]?.name || 'Desconhecido';
+                              return (
+                                <tr key={v.user_id + v.match_id}>
+                                  <td>{name}</td>
+                                  <td>
+                                    <strong>
+                                      {v.home_score} x {v.away_score}
+                                    </strong>
+                                  </td>
+                                  <td style={{ fontSize: '0.8rem' }}>
+                                    {canHavePenalties(m.stage) ? (
+                                      <span>
+                                        {v.predicted_penalties ? 'Sim' : 'Não'}
+                                        {penaltyPts > 0 && <span style={{ color: 'var(--green)', marginLeft: '0.3rem' }}>+1</span>}
+                                      </span>
+                                    ) : '-'}
+                                  </td>
+                                  <td className={cls}>{totalPts > 0 ? totalPts : pts}</td>
+                                </tr>
+                              );
+                            })}
+                        </tbody>
+                      </table>
                   </div>
                 )}
               </div>

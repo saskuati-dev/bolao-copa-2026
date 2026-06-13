@@ -82,6 +82,10 @@ for (const m of data.matches) {
 
     if (m.score?.fullTime?.home != null) record.home_score = m.score.fullTime.home;
     if (m.score?.fullTime?.away != null) record.away_score = m.score.fullTime.away;
+    if (m.score?.penalties?.home != null && m.score?.penalties?.away != null) {
+      record.penalty_home_score = m.score.penalties.home;
+      record.penalty_away_score = m.score.penalties.away;
+    }
 
     const { error } = await sb.from('matches').upsert(
       record,

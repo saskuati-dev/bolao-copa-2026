@@ -5,12 +5,15 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
 import { RankingTable } from '@/components/RankingTable';
-import { calculatePoints } from '@/lib/points';
+import { calculatePoints, calculatePenaltyBonus, canHavePenalties, hadPenalties } from '@/lib/points';
 
 interface Match {
   id: string;
   home_score: number | null;
   away_score: number | null;
+  stage: string;
+  penalty_home_score?: number | null;
+  penalty_away_score?: number | null;
 }
 
 interface Vote {
@@ -18,6 +21,7 @@ interface Vote {
   match_id: string;
   home_score: number;
   away_score: number;
+  predicted_penalties?: boolean | null;
 }
 
 interface User {
@@ -65,7 +69,7 @@ export default function ClassificacaoPage() {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const { data: finished } = await supabase
       .from('matches')
-      .select('id, home_score, away_score')
+      .select('id, home_score, away_score, stage, penalty_home_score, penalty_away_score')
       .or(
         `status.eq.FINISHED,` +
         `and(status.in.(LIVE,IN_PLAY,TIMED),match_datetime.lt.${twoHoursAgo},home_score.not.is.null)`,
@@ -115,6 +119,7 @@ export default function ClassificacaoPage() {
       let total = 0;
       let exact = 0;
       let correct = 0;
+      let penaltyBonus = 0;
 
       userFinishedVotes.forEach((v) => {
         const match = fMatches.find((m) => m.id === v.match_id);
@@ -133,6 +138,13 @@ export default function ClassificacaoPage() {
         total += pts;
         if (pts === 5) { exact++; correct++; }
         else if (pts === 3) correct++;
+
+        if (canHavePenalties(match.stage)) {
+          const hasPens = hadPenalties(match);
+          const pb = calculatePenaltyBonus(v.predicted_penalties ?? null, hasPens);
+          total += pb;
+          if (pb > 0) penaltyBonus += pb;
+        }
       });
 
       if (championBets[u.id] && championBets[u.id] === championWinner) {
@@ -145,6 +157,7 @@ export default function ClassificacaoPage() {
         exact,
         correct,
         votes: userVotes.length,
+        penaltyBonus,
       };
     });
 
