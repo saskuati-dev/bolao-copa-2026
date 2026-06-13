@@ -65,7 +65,7 @@ export default function ResultadosPage() {
         .order('match_datetime', { ascending: false });
       setMatches(m || []);
 
-      const { data: u } = await supabase.from('users').select('id, name, email');
+      const { data: u } = await supabase.from('users').select('id, name, email').is('deleted_at', null);
       const userMap: Record<string, User> = {};
       (u || []).forEach((user: User) => {
         userMap[user.id] = user;

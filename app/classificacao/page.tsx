@@ -59,6 +59,7 @@ export default function ClassificacaoPage() {
     const { data: usersData } = await supabase
       .from('users')
       .select('*')
+      .is('deleted_at', null)
       .order('name');
 
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();

@@ -43,7 +43,7 @@ export function canVote(matchDatetime: string): boolean {
   const now = new Date();
   const target = new Date(matchDatetime);
   const diffMin = (target.getTime() - now.getTime()) / 60000;
-  return diffMin > 20;
+  return diffMin > 0;
 }
 
 export function formatCountdown(isoString: string): string {

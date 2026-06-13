@@ -148,7 +148,7 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
       return (
         <div className="vote-section">
           <span className="closed-text">
-            Palpites encerrados (faltam menos de 20 min)
+            Palpites encerrados (jogo iniciado)
           </span>
           {existingVote && (
             <div className="existing-vote" style={{ marginTop: '0.3rem' }}>

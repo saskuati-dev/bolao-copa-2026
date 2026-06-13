@@ -61,6 +61,7 @@ export default function PalpitesPage() {
       const { data: usersData } = await supabase
         .from('users')
         .select('id, name')
+        .is('deleted_at', null)
         .order('name');
 
       const { data: matchesData } = await supabase
