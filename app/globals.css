@@ -712,3 +712,94 @@ tr.highlight td {
   color: var(--text-muted);
   margin-top: 1rem;
 }
+
+/* ---- Grupos ---- */
+.grupos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 640px) {
+  .grupos-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.grupo-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.grupo-card-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 0.5rem 0.8rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.grupo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.7rem;
+}
+
+.grupo-table th {
+  padding: 0.35rem 0.25rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.grupo-table th:nth-child(2) {
+  text-align: left;
+}
+
+.grupo-table td {
+  padding: 0.35rem 0.25rem;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.grupo-table td.team-name {
+  text-align: left;
+  font-weight: 500;
+}
+
+.grupo-table td.pos {
+  color: var(--text-muted);
+  font-weight: 600;
+  width: 1.5rem;
+}
+
+.grupo-table td.pts {
+  font-weight: 700;
+}
+
+.grupo-table tr.qualified td {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.grupo-table tr.qualified td.pos {
+  color: var(--green);
+}
+
+.grupo-table td.sg-plus {
+  color: var(--green);
+}
+
+.grupo-table td.sg-minus {
+  color: var(--red);
+}
+
+.grupo-table tr:last-child td {
+  border-bottom: none;
+}

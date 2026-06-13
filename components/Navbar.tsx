@@ -50,6 +50,7 @@ export function Navbar() {
   const navItems = [
     { href: "/", label: "Jogos" },
     { href: "/meus-palpites", label: "Meus Palpites" },
+    { href: "/grupos", label: "Grupos" },
     { href: "/campeao", label: "Campeão" },
     { href: "/resultados", label: "Resultados" },
     { href: "/palpites", label: "Palpites" },
