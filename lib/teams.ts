@@ -49,6 +49,17 @@ const TEAM_MAP: Record<string, string> = {
   Uzbekistan: 'Uzbequistão',
 };
 
+const TEAM_NAME_NORMALIZE: Record<string, string> = {
+  'Czech Republic': 'Czechia',
+  'Bosnia and Herzegovina': 'Bosnia-Herzegovina',
+  'Cape Verde': 'Cape Verde Islands',
+  'Democratic Republic of the Congo': 'Congo DR',
+};
+
 export function translateTeam(name: string): string {
   return TEAM_MAP[name] || name;
+}
+
+export function normalizeTeam(name: string): string {
+  return TEAM_NAME_NORMALIZE[name] || name;
 }

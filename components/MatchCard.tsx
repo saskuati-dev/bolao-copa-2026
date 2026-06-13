@@ -24,6 +24,7 @@ interface Match {
   home_score: number | null;
   away_score: number | null;
   status: string;
+  time_elapsed?: string | null;
 }
 
 interface Vote {
@@ -237,7 +238,14 @@ export function MatchCard({ match, existingVote, userId, onVoteChange }: Props) 
     <div className={`card ${isLive ? 'live' : ''} ${urgentClass}`}>
       <div className="match-header">
         <span className="stage-tag">{formatStage(match)}</span>
-        {isLive && <span className="status-tag live">AO VIVO</span>}
+        {isLive && (
+          <span className="status-tag live">
+            AO VIVO
+            {match.time_elapsed && match.time_elapsed !== 'notstarted' && match.time_elapsed !== 'finished'
+              ? ` ${match.time_elapsed === 'HT' ? '— HT' : match.time_elapsed === '2H' ? '— 2ºT' : `— ${match.time_elapsed}'`}`
+              : ''}
+          </span>
+        )}
         {isFinished && <span className="status-tag finished">FINALIZADO</span>}
         {!isFinished && !isLive && (
           <span className="countdown">{countdown}</span>

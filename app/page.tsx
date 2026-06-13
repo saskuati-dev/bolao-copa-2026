@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
 import { MatchCard } from '@/components/MatchCard';
+import { normalizeTeam } from '@/lib/teams';
 
 interface Match {
   id: string;
@@ -19,6 +20,7 @@ interface Match {
   home_score: number | null;
   away_score: number | null;
   status: string;
+  time_elapsed?: string | null;
 }
 
 interface Vote {
@@ -116,9 +118,46 @@ export default function HomePage() {
       )
       .subscribe();
 
+    const pollingTimer = setInterval(async () => {
+      try {
+        const res = await fetch('https://worldcup26.ir/get/games');
+        if (!res.ok) return;
+        const games: any[] = await res.json();
+        setMatches((prev) => {
+          const updated = prev.map((m) => {
+            if (m.status !== 'LIVE' && m.status !== 'IN_PLAY') return m;
+            const mHome = normalizeTeam(m.home_team);
+            const mAway = normalizeTeam(m.away_team);
+            const mDate = new Date(m.match_datetime).toISOString().slice(0, 10);
+            const game = games.find((g: any) => {
+              const gDate = g.local_date ? g.local_date.slice(0, 10).split('/').reverse().join('-') : '';
+              return normalizeTeam(g.home) === mHome && normalizeTeam(g.away) === mAway && gDate === mDate;
+            });
+            if (!game) return m;
+            let status = m.status;
+            let time_elapsed = game.time_elapsed;
+            if (game.finished === 'TRUE' || game.time_elapsed === 'finished') {
+              status = 'FINISHED';
+              time_elapsed = null;
+            } else if (game.time_elapsed && game.time_elapsed !== 'notstarted') {
+              status = 'IN_PLAY';
+            } else {
+              time_elapsed = null;
+            }
+            const homeScore = game.home_score != null ? parseInt(game.home_score, 10) : null;
+            const awayScore = game.away_score != null ? parseInt(game.away_score, 10) : null;
+            return { ...m, home_score: homeScore, away_score: awayScore, status, time_elapsed };
+          });
+          return updated;
+        });
+      } catch {
+      }
+    }, 30000);
+
     return () => {
       matchesChannel.unsubscribe();
       votesChannel.unsubscribe();
+      clearInterval(pollingTimer);
     };
   }, [loadData, authed]);
 
