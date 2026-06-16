@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Navbar } from '@/components/Navbar';
 import { calculatePoints, calculatePenaltyBonus, formatStage, canHavePenalties, hadPenalties } from '@/lib/points';
@@ -263,7 +264,11 @@ export default function PalpitesPage() {
 
                 return (
                   <tr key={v.user_id + v.match_id}>
-                    <td>{user.name}</td>
+                    <td>
+                      <Link href={`/perfil/${v.user_id}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+                        {user.name}
+                      </Link>
+                    </td>
                     <td style={{ fontSize: '0.82rem' }}>
                       {translateTeam(match.home_team)} vs {translateTeam(match.away_team)}
                     </td>

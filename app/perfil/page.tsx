@@ -243,9 +243,6 @@ export default function PerfilPage() {
             </button>
           </div>
         )}
-        <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", marginTop: "0.3rem" }}>
-          {email}
-        </p>
       </div>
 
       <div className="profile-grid">

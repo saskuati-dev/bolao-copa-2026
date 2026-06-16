@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { calculatePoints } from '@/lib/points';
 
 interface User {
@@ -52,7 +53,11 @@ export function RankingTable({ ranking, currentUserId }: Props) {
                 className={r.user.id === currentUserId ? 'highlight' : ''}
               >
                 <td className="pos-cell">{pos}</td>
-                <td>{r.user.name}</td>
+                <td>
+                  <Link href={`/perfil/${r.user.id}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>
+                    {r.user.name}
+                  </Link>
+                </td>
                 <td>
                   <strong>{r.total}</strong>
                 </td>

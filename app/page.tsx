@@ -174,15 +174,33 @@ export default function HomePage() {
     );
   }, [matches]);
 
+  const todayTomorrow = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayAfterTomorrow = new Date(todayStart);
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
+    return matches.filter(
+      (m) =>
+        (m.status === 'SCHEDULED' || m.status === 'TIMED') &&
+        !myVotes[m.id] &&
+        new Date(m.match_datetime) >= todayStart &&
+        new Date(m.match_datetime) < dayAfterTomorrow,
+    );
+  }, [matches, myVotes]);
+
   const upcoming = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dayAfterTomorrow = new Date(todayStart);
+    dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+
     const term = teamFilter.toLowerCase();
     return matches.filter(
       (m) =>
-        (m.status === 'SCHEDULED' ||
-          m.status === 'TIMED' ||
-          m.status === 'LIVE' ||
-          m.status === 'IN_PLAY') &&
+        (m.status === 'SCHEDULED' || m.status === 'TIMED') &&
         !myVotes[m.id] &&
+        new Date(m.match_datetime) >= dayAfterTomorrow &&
         (!term ||
           m.home_team.toLowerCase().includes(term) ||
           m.away_team.toLowerCase().includes(term)),
@@ -235,7 +253,24 @@ export default function HomePage() {
         </>
       )}
 
-      <h2 className="section-title" style={{ marginTop: liveMatches.length > 0 ? '1.5rem' : 0 }}>
+      {todayTomorrow.length > 0 && (
+        <>
+          <h2 className="section-title" style={{ marginTop: liveMatches.length > 0 || upcoming.length > 0 ? '1.5rem' : 0 }}>
+            Hoje e Amanhã
+          </h2>
+          {todayTomorrow.map((m) => (
+            <MatchCard
+              key={m.id}
+              match={m}
+              existingVote={myVotes[m.id]}
+              userId={userId}
+              onVoteChange={loadData}
+            />
+          ))}
+        </>
+      )}
+
+      <h2 className="section-title" style={{ marginTop: liveMatches.length > 0 || todayTomorrow.length > 0 ? '1.5rem' : 0 }}>
         Próximos Jogos
       </h2>
 
